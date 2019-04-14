@@ -196,6 +196,9 @@ export default StyleSheet.create({
     justifyContent: "center",
     marginRight: 16
   },
+  highlightLink: {
+    color: "#FF9C00"
+  },
   faceDetectionBody: {
     justifyContent: "center",
     alignItems: "center",

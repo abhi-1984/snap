@@ -3,6 +3,7 @@ import {
   FlatList,
   Text,
   View,
+  Image,
   StatusBar,
   TouchableOpacity,
   ActivityIndicator
@@ -10,6 +11,9 @@ import {
 import { Font, Icon, Camera, Permissions, ImageManipulator } from "expo";
 import styles from "./styles";
 import posed, { Transition } from "react-native-pose";
+
+const UNSPLASH_API_KEY =
+  "bbd9a8b273051e131270739a60032859d43abf7d44b4865cefae2d2c586487a0";
 
 const Clarifai = require("clarifai");
 
@@ -32,6 +36,29 @@ const PopupOverlay = posed.View({
   }
 });
 
+let iconColors = [
+  {
+    bgColor: "#CAEEF9",
+    foreGroundColor: "#39AFD5"
+  },
+  {
+    bgColor: "#DDD5F0",
+    foreGroundColor: "#7B64C0"
+  },
+  {
+    bgColor: "#FBCCD2",
+    foreGroundColor: "#F35369"
+  },
+  {
+    bgColor: "#FBCCEB",
+    foreGroundColor: "#FF4DC2"
+  },
+  {
+    bgColor: "#BDDDFF",
+    foreGroundColor: "#0052CC"
+  }
+];
+
 export default class App extends React.Component {
   state = {
     fontLoaded: false,
@@ -41,7 +68,10 @@ export default class App extends React.Component {
     predictions: [],
     isPredictionsViewVisible: false,
     randomColor: {},
-    isLoading: false
+    isLoading: false,
+    randomPhoto: {},
+
+    showRandomPhoto: false
   };
 
   async componentWillMount() {
@@ -49,6 +79,18 @@ export default class App extends React.Component {
     this.setState({
       hasCameraPermission: status === "granted"
     });
+  }
+
+  fetchDataFrom(url) {
+    fetch(url)
+      .then(response => response.json())
+      .then(response => {
+        this.setState({
+          randomPhoto: response[0],
+          showRandomPhoto: true
+        });
+      })
+      .catch(e => console.log(e));
   }
 
   async componentDidMount() {
@@ -116,28 +158,27 @@ export default class App extends React.Component {
     let photo = await this.capturePhoto();
     let resized = await this.resize(photo);
     let predictions = await this.predict(resized, modelName);
-    let iconColors = [
-      {
-        bgColor: "#CAEEF9",
-        foreGroundColor: "#39AFD5"
-      },
-      {
-        bgColor: "#DDD5F0",
-        foreGroundColor: "#7B64C0"
-      },
-      {
-        bgColor: "#FBCCD2",
-        foreGroundColor: "#F35369"
-      },
-      {
-        bgColor: "#FBCCEB",
-        foreGroundColor: "#FF4DC2"
-      },
-      {
-        bgColor: "#BDDDFF",
-        foreGroundColor: "#0052CC"
-      }
-    ];
+
+    this.setState({
+      predictions:
+        modelName == "Basic"
+          ? predictions.outputs[0].data.concepts
+          : modelName === "Face"
+          ? predictions.outputs[0].data.regions[0]
+          : predictions.outputs[0].data.colors,
+      isPredictionsViewVisible: true,
+      isLoading: false,
+      randomColor: iconColors[Math.floor(Math.random() * iconColors.length)]
+    });
+  };
+
+  showDataFor = async (imageURL, modelName) => {
+    if (this.state.isPredictionsViewVisible == false) {
+      this.setState({
+        isLoading: true
+      });
+    }
+    let predictions = await this.predict(imageURL, modelName);
 
     this.setState({
       predictions:
@@ -159,13 +200,27 @@ export default class App extends React.Component {
     });
   }
 
+  onRandomPhotoPress() {
+    this.fetchDataFrom(
+      `https://api.unsplash.com/photos/random?count=1&client_id=${UNSPLASH_API_KEY}`
+    );
+  }
+
+  showCameraView() {
+    this.setState({
+      showRandomPhoto: false
+    });
+  }
+
   render() {
     const {
       hasCameraPermission,
       activeModelName,
       predictions,
       isPredictionsViewVisible,
-      randomColor
+      randomColor,
+      showRandomPhoto,
+      randomPhoto
     } = this.state;
 
     if (hasCameraPermission === null) {
@@ -183,35 +238,56 @@ export default class App extends React.Component {
                   snap
                   <Text style={styles.muted}>.ai</Text>
                 </Text>
-                <TouchableOpacity
-                  style={styles.switchCameraViewBG}
-                  onPress={() => {
-                    this.setState({
-                      type:
-                        this.state.type === Camera.Constants.Type.back
-                          ? Camera.Constants.Type.front
-                          : Camera.Constants.Type.back
-                    });
-                  }}
-                >
-                  <Icon.Ionicons name="ios-repeat" size={24} color="#fff" />
-                </TouchableOpacity>
+                {!showRandomPhoto ? (
+                  <TouchableOpacity
+                    style={styles.switchCameraViewBG}
+                    onPress={() => {
+                      this.setState({
+                        type:
+                          this.state.type === Camera.Constants.Type.back
+                            ? Camera.Constants.Type.front
+                            : Camera.Constants.Type.back
+                      });
+                    }}
+                  >
+                    <Icon.Ionicons name="ios-repeat" size={24} color="#fff" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.switchCameraViewBG}
+                    onPress={() => this.showCameraView()}
+                  >
+                    <Icon.Ionicons name="ios-camera" size={24} color="#fff" />
+                  </TouchableOpacity>
+                )}
               </View>
 
               <View style={styles.cameraViewWrapper}>
                 <View style={styles.cameraBorderView}>
-                  <Camera
-                    style={styles.cameraView}
-                    ref={ref => {
-                      this.camera = ref;
-                    }}
-                    type={this.state.type}
-                  />
+                  {showRandomPhoto ? (
+                    <Image
+                      style={styles.cameraView}
+                      source={{ uri: randomPhoto.urls.regular }}
+                    />
+                  ) : (
+                    <Camera
+                      style={styles.cameraView}
+                      ref={ref => {
+                        this.camera = ref;
+                      }}
+                      type={this.state.type}
+                    />
+                  )}
                 </View>
                 <Text style={styles.helperText}>Snap your photo</Text>
                 <Text style={styles.subtitle}>
-                  Understanding the world around you was never been easier. Try
-                  Random Photo
+                  Understanding the world around you was never been easier.
+                  <Text
+                    style={styles.highlightLink}
+                    onPress={() => this.onRandomPhotoPress()}
+                  >
+                    {" " + "Try Random Photo"}
+                  </Text>
                 </Text>
               </View>
 
@@ -277,7 +353,14 @@ export default class App extends React.Component {
 
               <TouchableOpacity
                 style={styles.discoverButtonView}
-                onPress={() => this.objectDetection(activeModelName)}
+                onPress={() =>
+                  showRandomPhoto
+                    ? this.showDataFor(
+                        randomPhoto.urls.regular,
+                        activeModelName
+                      )
+                    : this.objectDetection(activeModelName)
+                }
               >
                 {this.state.isLoading ? (
                   <ActivityIndicator
