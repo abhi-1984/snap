@@ -206,6 +206,22 @@ export default StyleSheet.create({
     height: "100%",
     flexDirection: "column"
   },
+  noDataWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    height: "100%",
+    flexDirection: "column"
+  },
+  noDataIcon: {
+    width: 80,
+    height: 80,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+    borderRadius: 40,
+    backgroundColor: "#e6e6e6"
+  },
   detection: {
     alignItems: "center",
     marginVertical: 20

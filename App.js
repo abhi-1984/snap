@@ -164,7 +164,7 @@ export default class App extends React.Component {
         modelName == "Basic"
           ? predictions.outputs[0].data.concepts
           : modelName === "Face"
-          ? predictions.outputs[0].data.regions[0]
+          ? predictions.outputs[0].data.regions
           : predictions.outputs[0].data.colors,
       isPredictionsViewVisible: true,
       isLoading: false,
@@ -185,7 +185,7 @@ export default class App extends React.Component {
         modelName == "Basic"
           ? predictions.outputs[0].data.concepts
           : modelName === "Face"
-          ? predictions.outputs[0].data.regions[0]
+          ? predictions.outputs[0].data.regions
           : predictions.outputs[0].data.colors,
       isPredictionsViewVisible: true,
       isLoading: false,
@@ -423,37 +423,47 @@ export default class App extends React.Component {
                           )}
                         />
                       )}
-                      {activeModelName === "Face" && (
-                        <View style={styles.faceDetectionBody}>
-                          <View style={styles.detection}>
-                            <View style={styles.faceDetectionBG}>
-                              <Text style={styles.predictionName}>
-                                {
-                                  predictions.data.face.age_appearance
-                                    .concepts[0].name
-                                }
+                      {activeModelName === "Face" &&
+                        (predictions && predictions[0].data ? (
+                          <View style={styles.faceDetectionBody}>
+                            <View style={styles.detection}>
+                              <View style={styles.faceDetectionBG}>
+                                <Text style={styles.predictionName}>
+                                  {
+                                    predictions[0].data.face.age_appearance
+                                      .concepts[0].name
+                                  }
+                                </Text>
+                              </View>
+                              <Text style={styles.captionTextView}>
+                                Possible Age
                               </Text>
                             </View>
-                            <Text style={styles.captionTextView}>
-                              Possible Age
-                            </Text>
-                          </View>
-                          <View style={styles.seperator} />
-                          <View style={styles.detection}>
-                            <View style={styles.faceDetectionBG}>
-                              <Text style={styles.predictionName}>
-                                {predictions.data.face.gender_appearance
-                                  .concepts[0].name === "masculine"
-                                  ? "👨"
-                                  : "👩"}
+                            <View style={styles.seperator} />
+                            <View style={styles.detection}>
+                              <View style={styles.faceDetectionBG}>
+                                <Text style={styles.predictionName}>
+                                  {predictions[0].data.face.gender_appearance
+                                    .concepts[0].name === "masculine"
+                                    ? "👨"
+                                    : "👩"}
+                                </Text>
+                              </View>
+                              <Text style={styles.captionTextView}>
+                                Possible Gender
                               </Text>
                             </View>
+                          </View>
+                        ) : (
+                          <View style={styles.noDataWrapper}>
+                            <View style={styles.noDataIcon}>
+                              <Text>🤔</Text>
+                            </View>
                             <Text style={styles.captionTextView}>
-                              Possible Gender
+                              No Face Found
                             </Text>
                           </View>
-                        </View>
-                      )}
+                        ))}
                       {activeModelName === "Color" && (
                         <FlatList
                           data={predictions.slice(0, 5).map(prediction => ({
