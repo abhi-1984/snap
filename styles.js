@@ -6,7 +6,8 @@ let deviceHeight = Dimensions.get("window").height;
 export default StyleSheet.create({
   wrapper: {
     flex: 1,
-    position: "relative"
+    position: "relative",
+    backgroundColor: "#000"
   },
   homeView: {
     flex: 1,
