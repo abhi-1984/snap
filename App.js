@@ -469,7 +469,8 @@ export default class App extends React.Component {
                           data={predictions.slice(0, 5).map(prediction => ({
                             key: `${prediction.raw_hex}`,
                             colorCode: prediction.raw_hex,
-                            colorPercentage: prediction.value,
+                            colorPercentage:
+                              (Math.round(prediction.value * 100) / 100) * 100,
                             colorName: prediction.w3c.name
                           }))}
                           renderItem={({ item }) => (
