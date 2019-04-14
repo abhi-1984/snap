@@ -4,10 +4,14 @@ import {
   Text,
   View,
   StatusBar,
-  TouchableOpacity
+  TouchableOpacity,
+  Dimensions,
+  Easing,
+  Animated
 } from "react-native";
 import { Font, Icon, Camera, Permissions, ImageManipulator } from "expo";
 import styles from "./styles";
+import posed, { Transition } from "react-native-pose";
 
 const Clarifai = require("clarifai");
 
@@ -15,6 +19,20 @@ const clarifai = new Clarifai.App({
   apiKey: "26a6ae51b70f4f01b171e5024d850e13"
 });
 process.nextTick = setImmediate;
+
+const PopupOverlay = posed.View({
+  enter: {
+    opacity: 1,
+    y: 0,
+    delayChildren: 200,
+    transition: { duration: 300, ease: "easeIn" }
+  },
+  exit: {
+    opacity: 0,
+    y: 800,
+    transition: { duration: 300, ease: "easeOut" }
+  }
+});
 
 export default class App extends React.Component {
   state = {
@@ -24,8 +42,7 @@ export default class App extends React.Component {
     activeModelName: "Basic",
     predictions: [],
     isPredictionsViewVisible: false,
-    randomColor: {},
-    faceDetection: []
+    randomColor: {}
   };
 
   async componentWillMount() {
@@ -81,6 +98,12 @@ export default class App extends React.Component {
         image
       );
       return predictions;
+    } else {
+      let predictions = await clarifai.models.predict(
+        "eeed0b6733a644cea07cf4c60f87ebb7",
+        image
+      );
+      return predictions;
     }
   };
 
@@ -115,16 +138,18 @@ export default class App extends React.Component {
       predictions:
         modelName == "Basic"
           ? predictions.outputs[0].data.concepts
-          : predictions.outputs[0].data.regions[0],
+          : modelName === "Face"
+          ? predictions.outputs[0].data.regions[0]
+          : predictions.outputs[0].data.colors,
       isPredictionsViewVisible: true,
       randomColor: iconColors[Math.floor(Math.random() * iconColors.length)]
     });
-    console.log("Predcitions are>>>>>", this.state.predictions);
   };
 
   closeDialog() {
     this.setState({
-      isPredictionsViewVisible: false
+      isPredictionsViewVisible: false,
+      predictions: []
     });
   }
 
@@ -251,90 +276,122 @@ export default class App extends React.Component {
                 <Text style={styles.discoverButtonTextView}>Discover</Text>
               </TouchableOpacity>
             </View>
-            {isPredictionsViewVisible && (
-              <View style={styles.overlay}>
-                <View style={styles.popupView}>
-                  <View style={styles.popupHeaderView}>
-                    <Text style={styles.popupTitle}>We've got 🙈</Text>
-                    <TouchableOpacity
-                      style={styles.closeDialog}
-                      onPress={() => this.closeDialog()}
-                    >
-                      <Text style={styles.closeDialogTextView}>Done</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.popupBodyView}>
-                    {activeModelName === "Basic" && (
-                      <FlatList
-                        data={predictions.slice(0, 10).map(prediction => ({
-                          key: `${prediction.name} ${prediction.value}`,
-                          name: prediction.name,
-                          confidence:
-                            (Math.round(prediction.value * 100) / 100) * 100
-                        }))}
-                        renderItem={({ item }) => (
-                          <View style={styles.listItemView}>
-                            <View
-                              style={[
-                                styles.iconBG,
-                                {
-                                  backgroundColor: `${randomColor.bgColor}`
-                                }
-                              ]}
-                            >
-                              <Icon.Ionicons
-                                name="ios-image"
-                                size={28}
-                                color={`${randomColor.foreGroundColor}`}
-                              />
+            <Transition>
+              {isPredictionsViewVisible && (
+                <PopupOverlay key="a" style={styles.overlay}>
+                  <View style={styles.popupView}>
+                    <View style={styles.popupHeaderView}>
+                      <Text style={styles.popupTitle}>We've got 🙈</Text>
+                      <TouchableOpacity
+                        style={styles.closeDialog}
+                        onPress={() => this.closeDialog()}
+                      >
+                        <Text style={styles.closeDialogTextView}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.popupBodyView}>
+                      {activeModelName === "Basic" && (
+                        <FlatList
+                          data={predictions.slice(0, 10).map(prediction => ({
+                            key: `${prediction.name} ${prediction.value}`,
+                            name: prediction.name,
+                            confidence:
+                              (Math.round(prediction.value * 100) / 100) * 100
+                          }))}
+                          renderItem={({ item }) => (
+                            <View style={styles.listItemView}>
+                              <View
+                                style={[
+                                  styles.iconBG,
+                                  {
+                                    backgroundColor: `${randomColor.bgColor}`
+                                  }
+                                ]}
+                              >
+                                <Icon.Ionicons
+                                  name="ios-image"
+                                  size={28}
+                                  color={`${randomColor.foreGroundColor}`}
+                                />
+                              </View>
+                              <View style={styles.data}>
+                                <Text style={styles.predictionName}>
+                                  {item.name}
+                                </Text>
+                                <Text style={styles.predictionPercentage}>
+                                  {item.confidence}%
+                                </Text>
+                              </View>
                             </View>
-                            <View style={styles.data}>
+                          )}
+                        />
+                      )}
+                      {activeModelName === "Face" && (
+                        <View style={styles.faceDetectionBody}>
+                          <View style={styles.detection}>
+                            <View style={styles.faceDetectionBG}>
                               <Text style={styles.predictionName}>
-                                {item.name}
-                              </Text>
-                              <Text style={styles.predictionPercentage}>
-                                {item.confidence}%
+                                {
+                                  predictions.data.face.age_appearance
+                                    .concepts[0].name
+                                }
                               </Text>
                             </View>
-                          </View>
-                        )}
-                      />
-                    )}
-                    {activeModelName === "Face" && (
-                      <View style={styles.faceDetectionBody}>
-                        <View style={styles.detection}>
-                          <View style={styles.faceDetectionBG}>
-                            <Text style={styles.predictionName}>
-                              {
-                                predictions.data.face.age_appearance.concepts[0]
-                                  .name
-                              }
+                            <Text style={styles.captionTextView}>
+                              Possible Age
                             </Text>
                           </View>
-                          <Text style={styles.captionTextView}>
-                            Possible Age
-                          </Text>
-                        </View>
-                        <View style={styles.seperator} />
-                        <View style={styles.detection}>
-                          <View style={styles.faceDetectionBG}>
-                            <Text style={styles.predictionName}>
-                              {predictions.data.face.age_appearance.concepts[0]
-                                .name === "masculine"
-                                ? "👨"
-                                : "👩"}
+                          <View style={styles.seperator} />
+                          <View style={styles.detection}>
+                            <View style={styles.faceDetectionBG}>
+                              <Text style={styles.predictionName}>
+                                {predictions.data.face.gender_appearance
+                                  .concepts[0].name === "masculine"
+                                  ? "👨"
+                                  : "👩"}
+                              </Text>
+                            </View>
+                            <Text style={styles.captionTextView}>
+                              Possible Gender
                             </Text>
                           </View>
-                          <Text style={styles.captionTextView}>
-                            Possible Gender
-                          </Text>
                         </View>
-                      </View>
-                    )}
+                      )}
+                      {activeModelName === "Color" && (
+                        <FlatList
+                          data={predictions.slice(0, 5).map(prediction => ({
+                            key: `${prediction.raw_hex}`,
+                            colorCode: prediction.raw_hex,
+                            colorPercentage: prediction.value,
+                            colorName: prediction.w3c.name
+                          }))}
+                          renderItem={({ item }) => (
+                            <View style={styles.listItemView}>
+                              <View
+                                style={[
+                                  styles.iconBG,
+                                  {
+                                    backgroundColor: `${item.colorCode}`
+                                  }
+                                ]}
+                              />
+                              <View style={styles.data}>
+                                <Text style={styles.predictionName}>
+                                  {item.colorName}
+                                </Text>
+                                <Text style={styles.predictionPercentage}>
+                                  {item.colorPercentage}%
+                                </Text>
+                              </View>
+                            </View>
+                          )}
+                        />
+                      )}
+                    </View>
                   </View>
-                </View>
-              </View>
-            )}
+                </PopupOverlay>
+              )}
+            </Transition>
           </View>
         )
       );
