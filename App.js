@@ -6,16 +6,31 @@ import {
   StatusBar,
   TouchableOpacity
 } from "react-native";
-import { Font, Icon, Camera, Permissions } from "expo";
+import { Font, Icon, Camera, Permissions, ImageManipulator } from "expo";
 import styles from "./styles";
+
+const Clarifai = require("clarifai");
+
+const clarifai = new Clarifai.App({
+  apiKey: "26a6ae51b70f4f01b171e5024d850e13"
+});
+process.nextTick = setImmediate;
 
 export default class App extends React.Component {
   state = {
     fontLoaded: false,
     hasCameraPermission: null,
     type: Camera.Constants.Type.back,
-    activeModelName: "Basic"
+    activeModelName: "Basic",
+    predictions: []
   };
+
+  async componentWillMount() {
+    const { status } = await Permissions.askAsync(Permissions.CAMERA);
+    this.setState({
+      hasCameraPermission: status === "granted"
+    });
+  }
 
   async componentDidMount() {
     await Font.loadAsync({
@@ -23,12 +38,17 @@ export default class App extends React.Component {
       "maison-neue-book": require("./assets/fonts/MaisonNeue-Book.ttf"),
       "maison-neue-demi": require("./assets/fonts/MaisonNeue-Demi.ttf")
     });
-    const { status } = await Permissions.askAsync(Permissions.CAMERA);
     this.setState({
-      fontLoaded: true,
-      hasCameraPermission: status === "granted"
+      fontLoaded: true
     });
   }
+
+  capturePhoto = async () => {
+    if (this.camera) {
+      let photo = await this.camera.takePictureAsync();
+      return photo.uri;
+    }
+  };
 
   modelButtonPressed(modelName) {
     this.setState({
@@ -36,8 +56,35 @@ export default class App extends React.Component {
     });
   }
 
+  resize = async photo => {
+    let manipulatedImage = await ImageManipulator.manipulateAsync(
+      photo,
+      [{ resize: { height: 300, width: 300 } }],
+      { base64: true }
+    );
+    return manipulatedImage.base64;
+  };
+
+  predict = async image => {
+    let predictions = await clarifai.models.predict(
+      Clarifai.GENERAL_MODEL,
+      image
+    );
+    return predictions;
+  };
+
+  objectDetection = async () => {
+    let photo = await this.capturePhoto();
+    let resized = await this.resize(photo);
+    let predictions = await this.predict(resized);
+    this.setState({
+      predictions: predictions.outputs[0].data.concepts
+    });
+    console.log("predictions are -> ", this.state.predictions);
+  };
+
   render() {
-    const { hasCameraPermission, activeModelName } = this.state;
+    const { hasCameraPermission, activeModelName, predictions } = this.state;
     if (hasCameraPermission === null) {
       return <View style={{ backgroundColor: "#fff" }} />;
     } else if (hasCameraPermission === false) {
@@ -68,7 +115,13 @@ export default class App extends React.Component {
 
             <View style={styles.cameraViewWrapper}>
               <View style={styles.cameraBorderView}>
-                <Camera style={styles.cameraView} type={this.state.type} />
+                <Camera
+                  style={styles.cameraView}
+                  ref={ref => {
+                    this.camera = ref;
+                  }}
+                  type={this.state.type}
+                />
               </View>
               <Text style={styles.helperText}>Snap your photo</Text>
             </View>
@@ -134,7 +187,10 @@ export default class App extends React.Component {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.discoverButtonView}>
+            <TouchableOpacity
+              style={styles.discoverButtonView}
+              onPress={this.objectDetection}
+            >
               <Text style={styles.discoverButtonTextView}>Discover</Text>
             </TouchableOpacity>
           </View>
