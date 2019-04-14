@@ -5,9 +5,7 @@ import {
   View,
   StatusBar,
   TouchableOpacity,
-  Dimensions,
-  Easing,
-  Animated
+  ActivityIndicator
 } from "react-native";
 import { Font, Icon, Camera, Permissions, ImageManipulator } from "expo";
 import styles from "./styles";
@@ -42,7 +40,8 @@ export default class App extends React.Component {
     activeModelName: "Basic",
     predictions: [],
     isPredictionsViewVisible: false,
-    randomColor: {}
+    randomColor: {},
+    isLoading: false
   };
 
   async componentWillMount() {
@@ -108,6 +107,12 @@ export default class App extends React.Component {
   };
 
   objectDetection = async modelName => {
+    if (this.state.isPredictionsViewVisible == false) {
+      this.setState({
+        isLoading: true
+      });
+    }
+
     let photo = await this.capturePhoto();
     let resized = await this.resize(photo);
     let predictions = await this.predict(resized, modelName);
@@ -142,6 +147,7 @@ export default class App extends React.Component {
           ? predictions.outputs[0].data.regions[0]
           : predictions.outputs[0].data.colors,
       isPredictionsViewVisible: true,
+      isLoading: false,
       randomColor: iconColors[Math.floor(Math.random() * iconColors.length)]
     });
   };
@@ -273,7 +279,15 @@ export default class App extends React.Component {
                 style={styles.discoverButtonView}
                 onPress={() => this.objectDetection(activeModelName)}
               >
-                <Text style={styles.discoverButtonTextView}>Discover</Text>
+                {this.state.isLoading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color="#000"
+                    animating={true}
+                  />
+                ) : (
+                  <Text style={styles.discoverButtonTextView}>Discover</Text>
+                )}
               </TouchableOpacity>
             </View>
             <Transition>
