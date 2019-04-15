@@ -50,7 +50,8 @@ export default StyleSheet.create({
     borderColor: "#fff",
     width: 250,
     height: 250,
-    borderRadius: 125
+    borderRadius: 125,
+    overflow: "hidden"
   },
   cameraView: {
     width: "100%",
