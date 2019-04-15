@@ -70,7 +70,7 @@ export default class App extends React.Component {
     randomColor: {},
     isLoading: false,
     randomPhoto: {},
-
+    capturedPhoto: null,
     showRandomPhoto: false
   };
 
@@ -156,6 +156,11 @@ export default class App extends React.Component {
     }
 
     let photo = await this.capturePhoto();
+
+    this.setState({
+      capturedPhoto: photo
+    });
+
     let resized = await this.resize(photo);
     let predictions = await this.predict(resized, modelName);
 
@@ -196,7 +201,8 @@ export default class App extends React.Component {
   closeDialog() {
     this.setState({
       isPredictionsViewVisible: false,
-      predictions: []
+      predictions: [],
+      capturedPhoto: null
     });
   }
 
@@ -220,7 +226,8 @@ export default class App extends React.Component {
       isPredictionsViewVisible,
       randomColor,
       showRandomPhoto,
-      randomPhoto
+      randomPhoto,
+      capturedPhoto
     } = this.state;
 
     if (hasCameraPermission === null) {
@@ -268,6 +275,11 @@ export default class App extends React.Component {
                     <Image
                       style={styles.cameraView}
                       source={{ uri: randomPhoto.urls.regular }}
+                    />
+                  ) : capturedPhoto ? (
+                    <Image
+                      style={styles.cameraView}
+                      source={{ uri: capturedPhoto }}
                     />
                   ) : (
                     <Camera
