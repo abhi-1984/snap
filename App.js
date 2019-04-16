@@ -71,7 +71,8 @@ export default class App extends React.Component {
     isLoading: false,
     randomPhoto: {},
     capturedPhoto: null,
-    showRandomPhoto: false
+    showRandomPhoto: false,
+    disableBtn: false
   };
 
   async componentWillMount() {
@@ -172,6 +173,7 @@ export default class App extends React.Component {
           ? predictions.outputs[0].data.regions
           : predictions.outputs[0].data.colors,
       isPredictionsViewVisible: true,
+      disableBtn: false,
       isLoading: false,
       randomColor: iconColors[Math.floor(Math.random() * iconColors.length)]
     });
@@ -227,7 +229,8 @@ export default class App extends React.Component {
       randomColor,
       showRandomPhoto,
       randomPhoto,
-      capturedPhoto
+      capturedPhoto,
+      disableBtn
     } = this.state;
 
     if (hasCameraPermission === null) {
@@ -365,14 +368,16 @@ export default class App extends React.Component {
 
               <TouchableOpacity
                 style={styles.discoverButtonView}
-                onPress={() =>
+                disabled={disableBtn}
+                onPress={() => {
+                  this.setState({ disableBtn: true });
                   showRandomPhoto
                     ? this.showDataFor(
                         randomPhoto.urls.regular,
                         activeModelName
                       )
-                    : this.objectDetection(activeModelName)
-                }
+                    : this.objectDetection(activeModelName);
+                }}
               >
                 {this.state.isLoading ? (
                   <ActivityIndicator
