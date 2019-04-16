@@ -195,6 +195,7 @@ export default class App extends React.Component {
           ? predictions.outputs[0].data.regions
           : predictions.outputs[0].data.colors,
       isPredictionsViewVisible: true,
+      disableBtn: false,
       isLoading: false,
       randomColor: iconColors[Math.floor(Math.random() * iconColors.length)]
     });
